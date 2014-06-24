@@ -315,7 +315,9 @@ function keyUppedListener(e) {
 	try { //this definitely has to be here to address #3 because what if user is typing two key hotkey, and lifts the second downed key before or something something adfhalsdfasf too much thinking
 		console.log('clearing navBufferTO');
 		hasNewTab_ContentWindow.clearTimeout(navBufferTO);
-	} catch(ex) { console.log(ex) }
+	} catch(ex) {
+		console.log(ex);
+	}
 	
 	navBufferTO = hasNewTab_ContentWindow.setTimeout(navBuffer, prefs.multiKeySpeed);
 }
