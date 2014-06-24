@@ -1,6 +1,6 @@
 const {interfaces: Ci,	utils: Cu} = Components;
 Cu.import('resource://gre/modules/Services.jsm');
-
+Cu.import('resource://gre/modules/devtools/Console.jsm');
 const chromePath = 'chrome://nthotkey/content/';
 const ignoreFrames = false;
 
@@ -36,7 +36,7 @@ function addDiv(theDoc) {
 		[].forEach.call(preThumbs, function(thumb) {
 			ntThumbs.push(thumb);
 		});
-
+		console.log('ntThumbs=', ntThumbs);
 	}
 	
 	validHotkeys = ',';
@@ -155,7 +155,7 @@ function navBuffer() {
 	
 	
 	var hint = hasNewTab_ContentWindow.document.querySelector('.ntHotkey-' + tBuffer);
-
+	//console.error('html of document checking for buffer', hasNewTab_ContentWindow.document.documentElement.innerHTML);
 	if (hint) {
 		var DOMWin = hasNewTab_ContentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
 											.getInterface(Ci.nsIWebNavigation)
@@ -209,11 +209,11 @@ function keyDownedListener(e) {
 	
 	if (hasNewTab_ContentWindow && hasNewTab_ContentWindow.document && (hasNewTab_ContentWindow.document instanceof Ci.nsIDOMXULDocument || hasNewTab_ContentWindow.document.location != 'about:newtab')) {
 		//likely just navBuffer'ed and need to disconnect this now
-
+		//console.info('doing checkWinHasNewTab');
 		checkWinHasNewTab(hasNewTab_ContentWindow.top);
 		
 	} else {
-
+		//console.warn('NOTTTT doing checkWinHasNewTab');
 	}
 	
 	//may need to ahve a clearNavBufferTO after the checkWinHasNewTab runs
@@ -244,14 +244,14 @@ function keyUppedListener(e) {
 			if (e.target && e.target.getAttribute('id') == 'urlbar') {
 				inurlbar = true;
 			} else {
-
+				//console.info('returing dont listen to key input from chrome as we not in urlbar');
 				return; //dont listen to any key input if coming from chrome except if they are in urlbar
 			}
 		} 
 	}
 		
 	buffer += '' + key;
-
+	console.log('buffer updated to "' + buffer + '"');
 	
 	
 	try {
@@ -269,54 +269,54 @@ function keyUppedListener(e) {
 			*/
 			var value = input.value;
 			if (sStart != sEnd) {
-
+				console.log('urlbar value cleaning from autocompletion : ' + value);
 				value = value.replace(value.substr(sStart, sEnd), ''); //this removes the autocompletion
 			}
-
+			console.log('urlbar value = "' + value + '"');
 			
 			
 			//if (!((buffer == '' && value.length == 1) || (buffer.length == value.length - 1 && value.indexOf(buffer) == 0))) {
 			if (buffer != value || value.length > maxHotkeyLength) {
-
-
-
+				console.log('typed to much, MUST NOT CLEAR BUFFER, as user may have typed 1 and then 2 real fast, he may have typed the 2 before keyupping the 1');
+				console.log('maxHotkey len = ' + maxHotkey.toString().length);
+				console.log('buffer = "' + buffer + '" and value = "' + value + '"');
 				buffer = '';
 				return;
 			} else {
-
+				console.log('all fine contnuing');
 			}
 			/* if (validHotkeys.indexOf(',' + value) == -1) {
 				buffer = '';
-
+				console.log('ku: in url bar and the value in here is not in validHotkeys so return');
 				return;
 			} */
 		}
 	} catch (ex) {
-
-
+		console.log('caught ex');
+		console.log(ex);
 	}
 	
 	if (!inurlbar) {
 		//var hasCaret = (!e.target.getAttribute('disabled') && (formHelperIsEditable(e.target) || (e.target instanceof Ci.nsIDOMHTMLInputElement && e.target.mozIsTextField(false)) || e.target instanceof Ci.nsIDOMHTMLTextAreaElement || e.target instanceof Ci.nsIDOMXULTextBoxElement));
 		
 		if (hasCaret) {
-
+			console.log('in some typable field so dont listen keys');
 			buffer = '';
 			return;
 		}
 	}
 	
 	if (validHotkeys.indexOf(',' + buffer) == -1) {
-
+		console.log('buffer of "' + buffer + '" is not in validHotkeys so return');
 		buffer = '';
 		return;
 	}
 	
 	try { //this definitely has to be here to address #3 because what if user is typing two key hotkey, and lifts the second downed key before or something something adfhalsdfasf too much thinking
-
+		console.log('clearing navBufferTO');
 		hasNewTab_ContentWindow.clearTimeout(navBufferTO);
 	} catch(ex) {
-
+		console.log(ex);
 	}
 	
 	navBufferTO = hasNewTab_ContentWindow.setTimeout(navBuffer, prefs.multiKeySpeed);
@@ -357,15 +357,15 @@ function winActd(e) {
 		//var aTab = gBrowser.selectedTab;
 		//var contentWindow = aTab.linkedBrowser.contentWindow;
 		var contentWindow = gBrowser.contentWindow;
-
+		console.log('running contentWin check');
 		checkWinHasNewTab(contentWindow);
-
+		console.log('this focused gBrowser has new tab? == ' + hasNewTab);
 	} else {
-
+		console.log('running aDOMWin check');
 		checkWinHasNewTab(aDOMWindow);
-
+		console.log('this focused aDOMWin has new tab? == ' + hasNewTab);
 	}
-
+	console.log('actd complete');
 	
 	
 }
@@ -377,7 +377,7 @@ function tabSeld(e) {
 	var contentWindow = e.target.linkedBrowser.contentWindow;
 	
 	checkWinHasNewTab(contentWindow);
-
+	console.log('this focused tab has new tab? == ' + hasNewTab);
 	
 	
 }
@@ -389,7 +389,7 @@ function checkWinHasNewTab(theWin) {
 			if (theWin.top != hasNewTab_ContentWindow) {
 				//check because if a side iframe in the about:newtab window loads, and it doesnt have about:newtab, it will say its false but this willl not be accurate
 				//already identified that somewhere in this view is about:newtab so no need to check it again
-
+				console.log('has been already determined that this top window has about:newtab somewhere so dont check');
 				return;
 			}
 		}
@@ -400,13 +400,13 @@ function checkWinHasNewTab(theWin) {
 	for (var j = 0; j < frames.length; j++) {
 		winArr.push(frames[j].window);
 	}
-
+	console.log('checking win and # of frames in tab: ' + frames.length);
 	for (var j = 0; j < winArr.length; j++) {
 		/*
 		if (j == 0) {
-
+			console.log('**checking win: ' + j + ' location = ' + winArr[j].document.location);
 		} else {
-
+			console.log('**checking frame win: ' + j + ' location = ' + winArr[j].document.location);
 		}
 		*/
 		if (winArr[j].document.location == 'about:newtab') {
@@ -415,7 +415,7 @@ function checkWinHasNewTab(theWin) {
 			hasNewTab_ContentWindowTop = theWin.top;
 			return true;
 		} else {
-
+			console.log('the loch here is = ' + winArr[j].document.location);
 		}
 	}
 
@@ -427,10 +427,10 @@ function checkWinHasNewTab(theWin) {
 function listenPageLoad(event) {
 	var win = event.originalTarget.defaultView;
 	var doc = win.document;
-
+	console.log('page loaded loc = ' + doc.location);
 	if (win.frameElement) {
 		//its a frame
-
+		console.log('its a frame');
 		if (ignoreFrames) {
 			return;//dont want to watch frames
 		}
@@ -440,9 +440,9 @@ function listenPageLoad(event) {
 
 function listenAboutNewTabUnload(e) {
 	var win = e.originalTarget.defaultView;
-
+	console.log('in about unload');
 	checkWinHasNewTab(win);
-
+	console.log('hasNewTab? = ' + hasNewTab);
 }
 /*start - windowlistener*/
 var windowListener = {
@@ -478,10 +478,10 @@ var windowListener = {
 			//var contentWindow = aTab.linkedBrowser.contentWindow;
 			var contentWindow = gBrowser.contentWindow;
 			checkWinHasNewTab(contentWindow);
-
+			console.log('onregister: this focused gBrowser has new tab? == ' + hasNewTab);
 		} else {
 			checkWinHasNewTab(aDOMWindow);
-
+			console.log('onregister: this focused aDOMWin has new tab? == ' + hasNewTab);
 		}
 		//end - check if currently focused window hasNewTab
 	},
@@ -513,7 +513,7 @@ var windowListener = {
 					//start - go through all tabs in this window we just added to
 					var tabs = aDOMWindow.gBrowser.tabContainer.childNodes;
 					for (var i = 0; i < tabs.length; i++) {
-
+						console.log('DOING tab: ' + i);
 						var tabBrowser = tabs[i].linkedBrowser;
 						var win = tabBrowser.contentWindow;
 						loadIntoContentWindowAndItsFrames(win);
@@ -535,7 +535,7 @@ var windowListener = {
 				//start - go through all tabs in this window we just added to
 				var tabs = aDOMWindow.gBrowser.tabContainer.childNodes;
 				for (var i = 0; i < tabs.length; i++) {
-
+					console.log('DOING tab: ' + i);
 					var tabBrowser = tabs[i].linkedBrowser;
 					var win = tabBrowser.contentWindow;
 					loadIntoContentWindowAndItsFrames(win);
@@ -566,7 +566,7 @@ var windowListener = {
 					//start - go through all tabs in this window we just added to
 					var tabs = aDOMWindow.gBrowser.tabContainer.childNodes;
 					for (var i = 0; i < tabs.length; i++) {
-
+						console.log('DOING tab: ' + i);
 						var tabBrowser = tabs[i].linkedBrowser;
 						var win = tabBrowser.contentWindow;
 						unloadFromContentWindowAndItsFrames(win);
@@ -588,7 +588,7 @@ var windowListener = {
 				//start - go through all tabs in this window we just added to
 				var tabs = aDOMWindow.gBrowser.tabContainer.childNodes;
 				for (var i = 0; i < tabs.length; i++) {
-
+					console.log('DOING tab: ' + i);
 					var tabBrowser = tabs[i].linkedBrowser;
 					var win = tabBrowser.contentWindow;
 					unloadFromContentWindowAndItsFrames(win);
@@ -613,12 +613,12 @@ function loadIntoContentWindowAndItsFrames(theWin) {
 	for (var j = 0; j < frames.length; j++) {
 		winArr.push(frames[j].window);
 	}
-
+	console.log('# of frames in tab: ' + frames.length);
 	for (var j = 0; j < winArr.length; j++) {
 		if (j == 0) {
-
+			console.log('**checking win: ' + j + ' location = ' + winArr[j].document.location);
 		} else {
-
+			console.log('**checking frame win: ' + j + ' location = ' + winArr[j].document.location);
 		}
 		var doc = winArr[j].document;
 		//START - edit below here
@@ -636,12 +636,12 @@ function unloadFromContentWindowAndItsFrames(theWin) {
 	for (var j = 0; j < frames.length; j++) {
 		winArr.push(frames[j].window);
 	}
-
+	console.log('# of frames in tab: ' + frames.length);
 	for (var j = 0; j < winArr.length; j++) {
 		if (j == 0) {
-
+			console.log('**checking win: ' + j + ' location = ' + winArr[j].document.location);
 		} else {
-
+			console.log('**checking frame win: ' + j + ' location = ' + winArr[j].document.location);
 		}
 		var doc = winArr[j].document;
 		//START - edit below here
@@ -676,8 +676,8 @@ function jsonToDOM(xml, doc, nodes) {
 
         var args = Array.slice(arguments, 2);
         var vals = namespace(name);
-
-
+		//console.log('vals[0] = "' + vals[0] + '"');
+		//console.log('vals[1] = "' + vals[1] + '"');
         var elem = doc.createElementNS(vals[0] || jsonToDOM.defaultNamespace, vals[1]);
 
         for (var key in attr) {
@@ -692,9 +692,9 @@ function jsonToDOM(xml, doc, nodes) {
                 elem.setAttributeNS(vals[0] || "", vals[1], val);
         }
         args.forEach(function(e) {
-
-
-
+			//console.log('e == ' + e);
+			//console.log('typeof == ' + cTypeof(e));
+			//console.log('e instanceof doc.defaultView.Node == ' + (e instanceof doc.defaultView.Node));
 			try {
 				elem.appendChild(Object.prototype.toString.call(e) == '[object Array]' ?
 									tag.apply(null, e) :
